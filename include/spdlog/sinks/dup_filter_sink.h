@@ -53,6 +53,7 @@ protected:
     std::chrono::microseconds max_skip_duration_;
     log_clock::time_point last_msg_time_;
     std::string last_msg_payload_;
+    level::level_enum last_msg_level_ = level::level_enum::off;
     size_t skip_counter_ = 0;
     level::level_enum skipped_msg_log_level_ = level::level_enum::off;
 
@@ -80,13 +81,16 @@ protected:
         dist_sink<Mutex>::sink_it_(msg);
         last_msg_time_ = msg.time;
         skip_counter_ = 0;
+        last_msg_level_ = msg.level;
         last_msg_payload_.assign(msg.payload.data(), msg.payload.data() + msg.payload.size());
     }
 
-    // return whether the log msg should be displayed (true) or skipped (false)
+    // return whether the log msg should be displayed (true) or skipped (false).
+    // a message is a duplicate only if both its payload and level match the last one.
     bool filter_(const details::log_msg &msg) const {
         const auto filter_duration = msg.time - last_msg_time_;
-        return (filter_duration > max_skip_duration_) || (msg.payload != last_msg_payload_);
+        return (filter_duration > max_skip_duration_) || (msg.level != last_msg_level_) ||
+               (msg.payload != last_msg_payload_);
     }
 };
 
